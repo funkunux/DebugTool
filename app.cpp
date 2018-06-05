@@ -8,7 +8,7 @@
 #include <errno.h>
 #include <string.h>
 
-#define debug(format, args...) printf("[%s:%u] "format, __FUNCTION__, __LINE__, ##args)
+#define debug(format, args...) printf("[%s:%u] " format, __FUNCTION__, __LINE__, ##args)
 
 using namespace std;
 class CheckParam
