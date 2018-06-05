@@ -80,7 +80,7 @@ public:
     }
     ~msgQueue()
     {
-        debug("exit\n");
+        //debug("exit\n");
         if(-1 == mq_close(mq_id))
         {
             debug("mq_close(%lu): %m\n", mq_id);
