@@ -4,3 +4,4 @@ app.exe
 .vscode/tasks.json
 *.o
 dbt
+elfdump
