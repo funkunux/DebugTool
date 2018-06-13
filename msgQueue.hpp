@@ -9,12 +9,8 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
+#include "config.h"
 
-#ifdef DEBUG
-#define debug(format, args...) printf("[%s:%u] " format, __FUNCTION__, __LINE__, ##args)
-#else
-#define debug(format, args...) 
-#endif
 
 #define MQ_OFLAG O_RDWR
 

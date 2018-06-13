@@ -1,22 +1,24 @@
 LARGS := -lrt -DDEBUG
+CFLAG := -std=c++11
 
 
-all:app.exe dbt elfdump
+all:app.exe dbt elfdump 
 
 app.exe:app.o msgQueue.hpp
-	g++ -o $@ $< $(LARGS)
+	g++ $(CFLAG) -o $@ $< $(LARGS)
 
 dbt:dbt.o msgQueue.hpp
-	g++ -o $@ $< $(LARGS)
+	g++ $(CFLAG) -o $@ $< $(LARGS)
 
 elfdump:elfdump.o
-	g++ -o $@ $<
+	g++ $(CFLAG) -o $@ $< $(LARGS)
 
 %.o:%.cpp
-	g++ -o $@ -c $< $(LARGS)
+	g++ $(CFLAG) -o $@ -c $< $(LARGS)
 
 app.o:msgQueue.hpp
 dbt.o:msgQueue.hpp
+elfdump.o:ElfFile.h FileReader.h
 
 clean:
 	rm -f *.o app.exe dbt

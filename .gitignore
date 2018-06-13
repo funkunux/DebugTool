@@ -5,3 +5,4 @@ app.exe
 *.o
 dbt
 elfdump
+test*
