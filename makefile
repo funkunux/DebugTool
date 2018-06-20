@@ -1,5 +1,5 @@
 LARGS := -lrt -DDEBUG
-CFLAG := -std=c++11
+CFLAG := -std=c++11 -g
 
 
 all:app.exe dbt elfdump 

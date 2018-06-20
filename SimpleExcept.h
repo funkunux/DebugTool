@@ -10,9 +10,10 @@ public:
     std::string _errMsg;
     SimpleExcept(const std::string errMsg)
     {
+        std::cout << errMsg << std::endl;
         _errMsg = errMsg;
     }
-    const char *what()
+    char const *what()
     {
         return _errMsg.c_str();
     }

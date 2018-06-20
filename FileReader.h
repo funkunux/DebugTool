@@ -39,7 +39,7 @@ public:
         }
     }
 
-    int read(char* buff, std::streamoff offset, int len, std::ios_base::seekdir from = std::ios::beg)
+    int read(char* buff, int len, std::streamoff offset = 0, std::ios_base::seekdir from = std::ios::beg)
     {
         int readSize;
         _infile->seekg(offset, from);
