@@ -5,6 +5,7 @@
 #include "SimpleExcept.h"
 #include <elf.h>
 #include <vector>
+#include <map>
 #include "config.h"
 
 class ElfFile
@@ -12,6 +13,8 @@ class ElfFile
 private:
     FileReader *_elfFile;
     Elf32_Ehdr _elfHeader;
+    char *sessionNameBuff;
+    int sessionNameBuffSize;
     std::vector<Elf32_Shdr*> vpSessionHdr;
     std::vector<Elf32_Phdr*> vpPrgmmHdr;
 
@@ -51,7 +54,29 @@ public:
             }
             vpSessionHdr.push_back(sessionHeader);
         }
+
+        sessionNameBuffSize = vpSessionHdr[_elfHeader.e_shstrndx]->sh_size;
+        int sessionNameBuffOff = vpSessionHdr[_elfHeader.e_shstrndx]->sh_offset;
+        sessionNameBuff = new char[sessionNameBuffSize];
+        
+        if(!getBuff(sessionNameBuff, sessionNameBuffSize, sessionNameBuffOff))
+        {
+            debug("Get sessionNameBuff failed!\n");
+            throw SimpleExcept("Bad sessionNameBuff!");
+        }
     }
+
+    bool getBuff(char* buff, int size, int offset)
+    {
+        int readSize = _elfFile->read(buff, size, offset);
+        if(size != readSize)
+        {
+            debug("Can't read %d bytes but %d\n", size, readSize);
+            return false;
+        } 
+        return true;
+    }
+
 
     ~ElfFile()
     {
@@ -88,10 +113,14 @@ public:
         return (0x7f != _elfHeader.e_ident[0] || 'E' != _elfHeader.e_ident[1] || 'L' != _elfHeader.e_ident[2] || 'F' != _elfHeader.e_ident[3]);
     }
 
-    char* getSessionName(int index)
+    char* getSessionName(int offset)
     {
-        int offset = _elfHeader.e_shoff + _elfHeader.e_shstrndx + _elfHeader.e_shentsize;
-        return "";
+        if(0 > offset || sessionNameBuffSize <= offset)
+        {
+            debug("Error offset:%d, max:%d\n", offset, sessionNameBuffSize);
+            throw SimpleExcept("Out of range!");
+        }
+        return sessionNameBuff + offset;
     }
 
     void info()
@@ -175,6 +204,14 @@ public:
         SHOWKEY("Entry Num:", _elfHeader.e_shnum);   /* TODO：最大值为SHN_LORESERVE */
         SHOWKEY("Index of StrName:", _elfHeader.e_shstrndx);
         SHOWKEY("StrName Table Offset:", _elfHeader.e_shoff + _elfHeader.e_shstrndx * _elfHeader.e_shentsize);
+
+        printf("\n******** Section Info ********\n");
+        int index = 0;
+        for(auto session : vpSessionHdr)
+        {
+            SHOWKEY(index, getSessionName(session->sh_name));
+            index++;
+        }
     }
 };
 
