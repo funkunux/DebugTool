@@ -8,21 +8,45 @@
 #include <map>
 #include "config.h"
 
+class NameTable
+{
+public:
+    char *buff;
+    int size;
+    NameTable(unsigned int size)
+    {
+        this->size = size;
+        buff = new char[size];
+    }
+    ~NameTable()
+    {
+        delete [] buff;
+    }
+
+    char* getName(unsigned int index)
+    {
+        return buff + index;
+    }
+};
+
 class ElfFile
 {
 private:
     FileReader *_elfFile;
     Elf32_Ehdr _elfHeader;
-    char *sessionNameBuff;
-    int sessionNameBuffSize;
-    std::vector<Elf32_Shdr*> vpSessionHdr;
+    NameTable *secNameTbl;
+    NameTable *symNameTbl;
+    std::vector<Elf32_Shdr*> vpSectionHdr;
     std::vector<Elf32_Phdr*> vpPrgmmHdr;
+    std::vector<Elf32_Sym *> vpFuncSym;
 
 public:
     ElfFile(const char* filePath)
     {
         _elfHeader = {0};
         _elfFile = new FileReader(filePath);
+        secNameTbl = NULL;
+        symNameTbl = NULL;
 
         if(!getStruct<Elf32_Ehdr>(_elfHeader))
         {
@@ -46,23 +70,22 @@ public:
 
         for(int index = 0; index < _elfHeader.e_shnum; index++)
         {
-            Elf32_Shdr *sessionHeader = new Elf32_Shdr();
-            if(!getStruct<Elf32_Shdr>(*sessionHeader, _elfHeader.e_shoff + _elfHeader.e_shentsize * index))
+            Elf32_Shdr *sectionHeader = new Elf32_Shdr();
+            if(!getStruct<Elf32_Shdr>(*sectionHeader, _elfHeader.e_shoff + _elfHeader.e_shentsize * index))
             {
-                debug("Bad session header by index:%d\n", index);
-                throw SimpleExcept("Bad session header!");
+                debug("Bad section header by index:%d\n", index);
+                throw SimpleExcept("Bad section header!");
             }
-            vpSessionHdr.push_back(sessionHeader);
+            vpSectionHdr.push_back(sectionHeader);
         }
 
-        sessionNameBuffSize = vpSessionHdr[_elfHeader.e_shstrndx]->sh_size;
-        int sessionNameBuffOff = vpSessionHdr[_elfHeader.e_shstrndx]->sh_offset;
-        sessionNameBuff = new char[sessionNameBuffSize];
+        secNameTbl = new NameTable(vpSectionHdr[_elfHeader.e_shstrndx]->sh_size);
+        int sectionNameBuffOff = vpSectionHdr[_elfHeader.e_shstrndx]->sh_offset;
         
-        if(!getBuff(sessionNameBuff, sessionNameBuffSize, sessionNameBuffOff))
+        if(!getBuff(secNameTbl->buff, secNameTbl->size, sectionNameBuffOff))
         {
-            debug("Get sessionNameBuff failed!\n");
-            throw SimpleExcept("Bad sessionNameBuff!");
+            debug("Get sectionNameBuff failed!\n");
+            throw SimpleExcept("Bad sectionNameBuff!");
         }
     }
 
@@ -82,17 +105,19 @@ public:
     {
         debug("~ElfFile\n");
         delete _elfFile;
-        for(auto sessionHdr : vpSessionHdr)
+        for(auto sectionHdr : vpSectionHdr)
         {
-            delete sessionHdr;
+            delete sectionHdr;
         }
-        vpSessionHdr.clear();
+        vpSectionHdr.clear();
 
         for(auto prgmmHdr : vpPrgmmHdr)
         {
             delete prgmmHdr;
         }
         vpPrgmmHdr.clear();
+        if(NULL != secNameTbl) delete secNameTbl;
+        if(NULL != symNameTbl) delete symNameTbl;
     }
 
     template<typename T>
@@ -113,14 +138,47 @@ public:
         return (0x7f != _elfHeader.e_ident[0] || 'E' != _elfHeader.e_ident[1] || 'L' != _elfHeader.e_ident[2] || 'F' != _elfHeader.e_ident[3]);
     }
 
-    char* getSessionName(int offset)
+    void showSectionInfo(Elf32_Shdr *section)
     {
-        if(0 > offset || sessionNameBuffSize <= offset)
+        int sizeOfSection = 0;
+        int sizeOfEntry = 0;
+        
+        sizeOfSection = section->sh_size;
+        sizeOfEntry = section->sh_entsize;
+        if(0 == sizeOfSection)
         {
-            debug("Error offset:%d, max:%d\n", offset, sessionNameBuffSize);
-            throw SimpleExcept("Out of range!");
+            return;
         }
-        return sessionNameBuff + offset;
+        printf("\n******** %s ********\n", secNameTbl->getName(section->sh_name));
+        printf("FLAGS:    ");
+        if(SHF_WRITE & section->sh_flags)
+            printf(" WRITE");
+        if(SHF_ALLOC & section->sh_flags)
+            printf(" ALLOC");
+        if(SHF_EXECINSTR & section->sh_flags)
+            printf(" EXECINSTR");
+        if(SHF_MASKPROC & section->sh_flags)
+            printf(" MASKPROC");
+        printf("\n");
+        SHOWKEY("Addr:", section->sh_addr);
+        SHOWKEY("Size:", sizeOfSection);
+        SHOWKEY("EntrySize:", sizeOfEntry);
+        if(0 != sizeOfEntry) SHOWKEY("SymCount:", sizeOfSection / sizeOfEntry);
+        SHOWKEY("Offset:", section->sh_offset);
+        SHOWKEY("Link:", section->sh_link);
+        SHOWKEY("Info:", section->sh_info);
+        SHOWKEY("Addralign:", section->sh_addralign);
+    }
+
+    void getFuncSymTbl()
+    {
+        for(auto section:vpSectionHdr)
+        {
+            if(SHT_SYMTAB == section->sh_type)
+            {
+                //TODO
+            }
+        }
     }
 
     void info()
@@ -207,11 +265,13 @@ public:
 
         printf("\n******** Section Info ********\n");
         int index = 0;
-        for(auto session : vpSessionHdr)
+        for(auto section : vpSectionHdr)
         {
-            SHOWKEY(index, getSessionName(session->sh_name));
+            showSectionInfo(section);
             index++;
         }
+
+        getFuncSymTbl();
     }
 };
 
