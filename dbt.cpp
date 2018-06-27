@@ -27,7 +27,6 @@ int main(int argc, char** argv)
     char buff[BUFF_SIZE];
     char msgQueName[64];
     msgQueue *myMsgQ;
-
     if(3 != argc || string(argv[1]) != "attach" || !isNumStr(argv[2]))
     {
         showUsage(argv[0]);

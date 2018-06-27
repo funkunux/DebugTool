@@ -1,4 +1,4 @@
-LARGS := -lrt 
+LARGS := -lrt -DDEBUG
 CFLAG := -std=c++11 -g
 
 

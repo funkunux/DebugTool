@@ -7,6 +7,7 @@
 #include <vector>
 #include <map>
 #include "config.h"
+#include <cxxabi.h>
 
 class NameTable
 {
@@ -174,6 +175,8 @@ public:
     {
         unsigned char strtabIndex = 0;
         Elf32_Shdr *strtabSection = NULL;
+        int statusOfDemangled = 0;
+        char *demangedName = NULL;
         for(auto section:vpSectionHdr)
         {
             if(SHT_SYMTAB == section->sh_type)
@@ -201,6 +204,14 @@ public:
                         throw SimpleExcept("Bad symbol struct!");
                     }
                     printf("symbol[%d]:%s\n", index, symNameTbl->buff + symbol->st_name);
+                    demangedName = __cxxabiv1::__cxa_demangle(symNameTbl->buff + symbol->st_name, NULL, NULL, &statusOfDemangled);
+                    if(0 != statusOfDemangled)
+                    {
+                        debug("Bad mangled name:%s\n", symNameTbl->buff + symbol->st_name);
+                        if(NULL != demangedName) delete demangedName;
+                        continue;
+                    }
+                    printf("DEMANGLED(%x):%s\n", symbol->st_value, demangedName);
                     FuncSymMap[std::string(symNameTbl->buff + symbol->st_name)] = symbol;
                 }
             }
