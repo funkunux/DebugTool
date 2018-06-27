@@ -1,8 +1,8 @@
-LARGS := -lrt -DDEBUG
+LARGS := -lrt 
 CFLAG := -std=c++11 -g
 
 
-all:app.exe dbt elfdump 
+all:app.exe dbt elfdump
 
 app.exe:app.o msgQueue.hpp
 	g++ $(CFLAG) -o $@ $< $(LARGS)

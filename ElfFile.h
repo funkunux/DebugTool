@@ -38,7 +38,7 @@ private:
     NameTable *symNameTbl;
     std::vector<Elf32_Shdr*> vpSectionHdr;
     std::vector<Elf32_Phdr*> vpPrgmmHdr;
-    std::vector<Elf32_Sym *> vpFuncSym;
+    std::map<std::string, Elf32_Sym *> FuncSymMap;
 
 public:
     ElfFile(const char* filePath)
@@ -172,11 +172,37 @@ public:
 
     void getFuncSymTbl()
     {
+        unsigned char strtabIndex = 0;
+        Elf32_Shdr *strtabSection = NULL;
         for(auto section:vpSectionHdr)
         {
             if(SHT_SYMTAB == section->sh_type)
             {
-                //TODO
+                strtabIndex = section->sh_link;
+                strtabSection = vpSectionHdr[strtabIndex];
+                if(NULL != symNameTbl)
+                {
+                    delete symNameTbl;
+                }
+
+                symNameTbl = new NameTable(strtabSection->sh_size);
+                if(!getBuff(symNameTbl->buff, symNameTbl->size, strtabSection->sh_offset))
+                {
+                    debug("Get symbolNameBuff failed!\n");
+                    throw SimpleExcept("Bad symbolNameBuff!");
+                }
+
+                for(int index = 0; index < section->sh_size / section->sh_entsize; index++)
+                {
+                    Elf32_Sym *symbol = new Elf32_Sym();
+                    if(!getStruct<Elf32_Sym>(*symbol, section->sh_offset + section->sh_entsize * index))
+                    {
+                        debug("Bad symbol struct by index:%d\n", index);
+                        throw SimpleExcept("Bad symbol struct!");
+                    }
+                    printf("symbol[%d]:%s\n", index, symNameTbl->buff + symbol->st_name);
+                    FuncSymMap[std::string(symNameTbl->buff + symbol->st_name)] = symbol;
+                }
             }
         }
     }
